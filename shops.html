@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>HerShield AI+ — Verified Shops</title>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+<div class="app">
+  <nav class="nav">
+    <div class="brand"><div class="logo-badge">HS+</div><div><div class="brand-title">HerShield AI+</div><div class="brand-tag">Made for women, By women</div></div></div>
+    <div class="nav-links">
+      <a href="home.html">Home</a>
+      <a href="shops.html" class="active">Shops</a>
+      <a href="homes.html">Homes</a>
+      <a href="drivers.html">Drivers</a>
+    </div>
+  </nav>
+
+  <main class="content">
+    <header class="topbar"><div class="left"><div class="greeting">Verified Shops</div><div class="small-note">Tap a shop to view profile or call (mock)</div></div><div class="actions"><button id="signOutBtn" class="btn ghost">Sign out</button></div></header>
+
+    <section class="card">
+      <h3>Shops (Structured)</h3>
+      <table class="list-table" id="shopsTable">
+        <thead><tr><th>ID</th><th>Name</th><th>Verified</th><th>Address</th><th>Contact</th><th>Hours</th><th>Actions</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+  </main>
+</div>
+
+<div id="modalRoot"></div>
+<script src="main.js"></script>
+<script>
+const SAMPLE_SHOPS = [
+  { id:'S001', name:'SafeMart Grocery', verified:true, address:'12 Rose Street, Salem', contact:'+91 90000 30001', hours:'8:00–22:00', notes:'Well-lit entrance' },
+  { id:'S002', name:'NightCare Pharmacy', verified:true, address:'45 Lakeview Ave, Salem', contact:'+91 90000 30002', hours:'24 hours', notes:'24/7 pharmacy with CCTV' },
+  { id:'S003', name:'Bright Boutique', verified:true, address:'8 Market Road, Salem', contact:'+91 90000 30003', hours:'10:00–20:00', notes:'Female staff available' }
+];
+
+function renderShops(){
+  const tbody = document.querySelector('#shopsTable tbody');
+  tbody.innerHTML = '';
+  SAMPLE_SHOPS.forEach(s=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${escapeHtml(s.id)}</td>
+      <td>${escapeHtml(s.name)}</td>
+      <td>${s.verified ? '✅' : '❌'}</td>
+      <td>${escapeHtml(s.address)}</td>
+      <td>${escapeHtml(s.contact)}</td>
+      <td>${escapeHtml(s.hours)}</td>
+      <td><button class="btn" data-id="${s.id}" data-action="view">View</button></td>`;
+    tbody.appendChild(tr);
+  });
+  document.querySelectorAll('[data-action="view"]').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      const id = e.target.getAttribute('data-id');
+      const s = SAMPLE_SHOPS.find(x=>x.id===id);
+      if(!s) return;
+      showModal({ title: s.name, html:`<p><strong>Address</strong> ${escapeHtml(s.address)}</p><p><strong>Contact</strong> ${escapeHtml(s.contact)}</p><p><strong>Hours</strong> ${escapeHtml(s.hours)}</p><p><strong>Notes</strong> ${escapeHtml(s.notes)}</p>`, primaryText:'OK' });
+    });
+  });
+}
+
+document.getElementById('signOutBtn').addEventListener('click', ()=> signOut());
+renderShops();
+</script>
+</body>
+</html>

@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>HerShield AI+ — Home</title>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+<div class="app">
+  <nav class="nav">
+    <div class="brand"><div class="logo-badge">HS+</div><div><div class="brand-title">HerShield AI+</div><div class="brand-tag">Made for women, By women</div></div></div>
+    <div class="nav-links">
+      <a href="home.html" class="active">Home</a>
+      <a href="ai.html">AI Chat</a>
+      <a href="saferoute.html">Safe Route</a>
+      <a href="patrol.html">Patrol</a>
+      <a href="homes.html">Homes</a>
+      <a href="drivers.html">Drivers</a>
+      <a href="shops.html">Shops</a>
+      <a href="register.html">Register</a>
+      <a href="evidence.html">Evidence</a>
+    </div>
+  </nav>
+
+  <main class="content">
+    <header class="topbar"><div class="left"><div class="greeting">Welcome to HerShield AI+</div><div class="small">One‑tap safety and community support</div></div><div class="actions"><button id="signOutBtn" class="btn ghost">Sign out</button></div></header>
+
+    <section class="card">
+      <h2>Quick Safety Actions</h2>
+      <div class="cta-row">
+        <button class="btn sos" id="sosBtn">🚨 SOS</button>
+        <button class="btn warn" id="unsafeBtn" style="background:linear-gradient(90deg,#ffd54f,#ffb86b);color:#111">⚠️ Feeling Unsafe</button>
+        <a href="saferoute.html" class="btn primary">🛣️ Safe Route</a>
+      </div>
+      <div style="margin-top:12px;color:var(--muted)">SOS captures GPS, short video and audio (demo). Evidence is saved automatically to Evidence Viewer.</div>
+    </section>
+
+    <section class="card">
+      <h3>Voice SOS</h3>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button id="enrollVoice" class="btn">Enroll Voice Keywords</button>
+        <button id="toggleVoice" class="btn">Enable Voice SOS</button>
+        <div id="voiceStatus" class="small-note" style="margin-left:12px">Voice SOS: <strong id="voiceState">Disabled</strong></div>
+      </div>
+      <div style="margin-top:8px;color:var(--muted)">Enroll keywords and record 3 samples. When enabled, saying those keywords will auto-trigger SOS (demo).</div>
+    </section>
+
+    <section class="card">
+      <h3>Live Location Sharing</h3>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button id="addTrusted" class="btn">Add Trusted Contact</button>
+        <button id="shareOnce" class="btn">Share Now</button>
+        <button id="startLive" class="btn">Start Live Share</button>
+        <button id="stopLive" class="btn">Stop Live Share</button>
+      </div>
+      <div id="trustedList" style="margin-top:10px"></div>
+    </section>
+
+    <section class="card">
+      <h3>Quick Links</h3>
+      <div class="quick-grid">
+        <a class="quick-card" href="homes.html"><div class="qc-title">Verified Homes</div><div class="qc-sub">Safe short‑stay hosts</div></a>
+        <a class="quick-card" href="shops.html"><div class="qc-title">Verified Shops</div><div class="qc-sub">Safe places nearby</div></a>
+        <a class="quick-card" href="drivers.html"><div class="qc-title">Recommended Drivers</div><div class="qc-sub">Female‑friendly rides</div></a>
+        <a class="quick-card" href="patrol.html"><div class="qc-title">Police Patrol</div><div class="qc-sub">Live patrol map</div></a>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="modalRoot"></div>
+<script src="main.js"></script>
+<script>
+document.getElementById('sosBtn').addEventListener('click', ()=> {
+  showModal({ title:'Confirm SOS', html:'<p>This will capture GPS and a short 10s audio/video clip (demo). Evidence is saved locally automatically. Proceed?</p>', primaryText:'Yes, capture', primaryAction: ()=> triggerSOSDemo(), secondaryText:'Cancel' });
+});
+document.getElementById('unsafeBtn').addEventListener('click', ()=> {
+  window.location.href = 'ai.html?checkin=1';
+});
+document.getElementById('signOutBtn').addEventListener('click', ()=> signOut());
+
+/* Voice SOS controls */
+const enrollBtn = document.getElementById('enrollVoice');
+const toggleBtn = document.getElementById('toggleVoice');
+const voiceStateEl = document.getElementById('voiceState');
+
+enrollBtn.addEventListener('click', ()=> {
+  if(typeof window.openVoiceEnrollmentModal === 'function') window.openVoiceEnrollmentModal();
+  else alert('Voice enrollment not available in this browser.');
+});
+
+async function refreshVoiceState(){
+  const list = await listVoiceEnrollments();
+  const enabled = (list || []).some(e=>e.enabled);
+  voiceStateEl.textContent = enabled ? 'Enabled' : 'Disabled';
+  toggleBtn.textContent = enabled ? 'Disable Voice SOS' : 'Enable Voice SOS';
+}
+toggleBtn.addEventListener('click', async ()=>{
+  const list = await listVoiceEnrollments();
+  if(!list || !list.length){ showModal({ title:'No enrollment', html:'<p>No voice enrollment found. Please enroll keywords first.</p>', primaryText:'OK' }); return; }
+  const enrollment = list[0]; // demo: single enrollment
+  const newState = !enrollment.enabled;
+  await setVoiceEnabled(enrollment.id, newState);
+  if(newState){
+    startVoiceSOSListener();
+    showModal({ title:'Voice SOS enabled', html:'<p>Voice SOS is now enabled. The app will listen for your keywords and trigger SOS automatically (demo).</p>', primaryText:'OK' });
+  } else {
+    stopVoiceSOSListener();
+    showModal({ title:'Voice SOS disabled', html:'<p>Voice SOS has been disabled.</p>', primaryText:'OK' });
+  }
+  refreshVoiceState();
+});
+
+refreshVoiceState();
+
+/* Trusted contacts UI */
+async function renderTrusted(){
+  const list = await listTrustedContacts();
+  const container = document.getElementById('trustedList');
+  container.innerHTML = '';
+  if(!list.length){ container.innerHTML = '<div class="small-note">No trusted contacts added.</div>'; return; }
+  const table = document.createElement('table'); table.className='list-table';
+  table.innerHTML = `<thead><tr><th>Name</th><th>Contact</th><th>Type</th><th>Actions</th></tr></thead><tbody></tbody>`;
+  list.forEach(c=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${escapeHtml(c.name)}</td><td>${escapeHtml(c.contact)}</td><td>${escapeHtml(c.type || 'phone')}</td><td><button class="btn" data-id="${c.id}" data-action="remove">Remove</button></td>`;
+    table.querySelector('tbody').appendChild(tr);
+  });
+  container.appendChild(table);
+  container.querySelectorAll('[data-action="remove"]').forEach(btn=>{
+    btn.addEventListener('click', async (e)=>{
+      const id = e.target.getAttribute('data-id');
+      await deleteTrustedContact(id);
+      renderTrusted();
+    });
+  });
+}
+
+document.getElementById('addTrusted').addEventListener('click', ()=>{
+  showModal({
+    title:'Add trusted contact',
+    html:`<div style="display:flex;flex-direction:column;gap:8px">
+      <input id="tcName" class="input" placeholder="Full name" />
+      <input id="tcContact" class="input" placeholder="Phone or email" />
+      <select id="tcType" class="input"><option value="phone">Phone</option><option value="email">Email</option></select>
+    </div>`,
+    primaryText:'Add',
+    primaryAction: async ()=>{
+      const name = document.getElementById('tcName').value.trim();
+      const contact = document.getElementById('tcContact').value.trim();
+      const type = document.getElementById('tcType').value;
+      if(!name || !contact){ alert('Enter name and contact'); return; }
+      await addTrustedContact({ name, contact, type });
+      renderTrusted();
+    }
+  });
+});
+
+document.getElementById('shareOnce').addEventListener('click', ()=> shareLiveLocationOnce());
+document.getElementById('startLive').addEventListener('click', ()=> startLiveShare(15));
+document.getElementById('stopLive').addEventListener('click', ()=> stopLiveShare());
+
+renderTrusted();
+</script>
+</body>
+</html>

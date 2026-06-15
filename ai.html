@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>HerShield AI+ — AI Chat</title>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+<div style="max-width:920px;margin:18px auto;padding:12px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <div>
+      <div style="font-family:var(--title-font);font-weight:800;font-size:20px;color:#fff">HerShield AI+ Chat</div>
+      <div style="color:var(--muted);margin-top:6px">Chat like a friend — check in, get guidance, or escalate to SOS</div>
+    </div>
+    <div>
+      <a href="home.html" class="btn ghost">Back</a>
+    </div>
+  </div>
+
+  <section class="card card--glass">
+    <div class="chat-wrap">
+      <div id="chatWindow" class="chat-window" role="log" aria-live="polite"></div>
+
+      <div style="display:flex;gap:8px;align-items:center" class="chat-input">
+        <input id="chatInput" class="input" placeholder="Type a message or use quick replies" style="flex:1"/>
+        <button id="sendBtn" class="btn primary">Send</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn" id="quickYes">Yes</button>
+        <button class="btn" id="quickNo">No</button>
+        <button class="btn" id="quickSOS">Trigger SOS</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div id="modalRoot"></div>
+<script src="main.js"></script>
+<script>
+const chatWindow = document.getElementById('chatWindow');
+const input = document.getElementById('chatInput');
+const sendBtn = document.getElementById('sendBtn');
+const quickYes = document.getElementById('quickYes');
+const quickNo = document.getElementById('quickNo');
+const quickSOS = document.getElementById('quickSOS');
+
+function appendMessage(text, who='bot'){
+  const el = document.createElement('div');
+  el.className = 'bubble ' + (who==='user' ? 'bubble-user' : 'bubble-ai');
+  el.innerHTML = `<div class="bubble-text">${escapeHtml(text)}</div>`;
+  chatWindow.appendChild(el);
+  chatWindow.scrollTop = chatWindow.scrollHeight;
+}
+
+function botReplyToUser(v){
+  const t = v.toLowerCase();
+  const kws = analyzeKeywords(v);
+  if(kws.includes('threat')) appendMessage("I hear words that suggest danger. Do you want me to trigger SOS now?", 'bot');
+  else if(kws.includes('medical')) appendMessage("That sounds like a medical issue. If you need immediate help, please call emergency services.", 'bot');
+  else if(kws.includes('lost')) appendMessage("If you're lost, share a nearby landmark or area name and I can help plan a safe route.", 'bot');
+  else appendMessage("Thanks for sharing. Would you like a check-in or help contacting someone?", 'bot');
+}
+
+/* Send handler */
+sendBtn.addEventListener('click', ()=>{
+  const v = input.value.trim();
+  if(!v) return;
+  appendMessage(v,'user');
+  input.value = '';
+  botReplyToUser(v);
+});
+
+/* Quick replies */
+quickYes.addEventListener('click', ()=> { appendMessage('Yes','user'); botReplyToUser('yes'); });
+quickNo.addEventListener('click', ()=> { appendMessage('No','user'); botReplyToUser('no'); });
+quickSOS.addEventListener('click', ()=> {
+  appendMessage('Please trigger SOS','user');
+  showModal({ title:'Trigger SOS', html:'<p>Trigger SOS now? This will capture GPS and a short 10s recording (demo). Evidence is saved locally automatically.</p>', primaryText:'Trigger', primaryAction: ()=> { triggerSOSFromAI(); }, secondaryText:'Cancel' });
+});
+
+/* Trigger SOS from AI page */
+async function triggerSOSFromAI(){
+  appendMessage("Triggering SOS — capturing short evidence (demo).", 'bot');
+  if(typeof window.triggerSOSDemo === 'function'){
+    await window.triggerSOSDemo();
+    appendMessage("SOS flow completed (demo). Evidence saved automatically.", 'bot');
+  } else {
+    showModal({ title:'SOS', html:'<p>Unable to trigger SOS from this page.</p>', primaryText:'OK' });
+  }
+}
+
+/* Start check-in if requested via query param */
+(function init(){
+  const params = new URLSearchParams(location.search);
+  if(params.get('checkin') === '1'){
+    setTimeout(()=> {
+      runCheckinFlow(
+        (userMsg)=> appendMessage(userMsg,'user'),
+        (botMsg)=> appendMessage(botMsg,'bot')
+      );
+    }, 400);
+  } else {
+    appendMessage("Hey — I'm your friendly AI. Ask me anything or start a check-in from the Home page.", 'bot');
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>HerShield AI+ — Create profile</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px">
+    <section class="card" style="max-width:520px;width:100%">
+      <div style="text-align:center;margin-bottom:12px">
+        <div style="font-family:var(--title-font);font-weight:800;font-size:28px;color:var(--text)">HerShield AI+</div>
+        <div style="color:var(--muted);margin-top:6px">Made for women, By women</div>
+      </div>
+
+      <form id="signupForm" style="display:flex;flex-direction:column;gap:10px" autocomplete="on" novalidate>
+        <label class="field">
+          <span class="label">Full name</span>
+          <input id="fullName" class="input" name="name" type="text" placeholder="Your full name" required />
+          <div id="nameError" class="small-note" style="color:#b71c1c;display:none"></div>
+        </label>
+
+        <label class="field">
+          <span class="label">Age</span>
+          <input id="age" class="input" name="age" type="number" min="16" max="99" placeholder="Age" required />
+          <div id="ageError" class="small-note" style="color:#b71c1c;display:none"></div>
+        </label>
+
+        <label class="field">
+          <span class="label">Phone (10 digits)</span>
+          <input id="phone" class="input" name="phone" type="tel" placeholder="10 digit mobile number" inputmode="tel" required />
+          <div id="phoneError" class="small-note" style="color:#b71c1c;display:none"></div>
+        </label>
+
+        <div style="display:flex;gap:8px;align-items:center">
+          <button type="submit" class="btn primary" style="flex:1">Create account</button>
+        </div>
+
+        <div style="font-size:12px;color:var(--muted);margin-top:8px">By continuing you agree to the demo terms. This is a prototype — do not use for real emergencies.</div>
+      </form>
+    </section>
+  </main>
+
+  <div id="modalRoot" aria-hidden="true"></div>
+  <script src="main.js"></script>
+  <script>
+    function validateName(name){ return /^[A-Za-z\s]{2,}$/.test(name); }
+    function validateAge(age){ return Number.isInteger(age) && age > 15 && age < 100; }
+    function validatePhone(phone){ return /^\d{10}$/.test(phone); }
+
+    document.getElementById('signupForm').addEventListener('submit', function(e){
+      e.preventDefault();
+      const nameEl = document.getElementById('fullName');
+      const ageEl = document.getElementById('age');
+      const phoneEl = document.getElementById('phone');
+      const name = nameEl.value.trim();
+      const age = Number(ageEl.value);
+      const phone = phoneEl.value.trim();
+
+      const nameError = document.getElementById('nameError');
+      const ageError = document.getElementById('ageError');
+      const phoneError = document.getElementById('phoneError');
+      nameError.style.display = 'none'; ageError.style.display = 'none'; phoneError.style.display = 'none';
+
+      if(!validateName(name)){ nameError.textContent = 'Name must contain only letters and spaces (no numbers).'; nameError.style.display='block'; nameEl.focus(); return; }
+      if(!validateAge(age)){ ageError.textContent = 'Age must be greater than 15 and less than 100.'; ageError.style.display='block'; ageEl.focus(); return; }
+      if(!validatePhone(phone)){ phoneError.textContent = 'Phone must be exactly 10 digits.'; phoneError.style.display='block'; phoneEl.focus(); return; }
+
+      const user = { name, age, phone, ts: new Date().toISOString() };
+      try {
+        localStorage.setItem('hs_user', JSON.stringify(user));
+        showModal({ title:'Profile created', html:'<p>Your profile is saved locally. Redirecting to Home...</p>', primaryText:'Continue', primaryAction: ()=> location.href='home.html' });
+      } catch(err){
+        showModal({ title:'Error', html:'<p>Unable to save profile in this browser.</p>', primaryText:'OK' });
+      }
+    });
+  </script>
+</body>
+</html>

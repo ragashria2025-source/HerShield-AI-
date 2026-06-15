@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>HerShield AI+ — Verified Homes</title>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+<div class="app">
+  <nav class="nav">
+    <div class="brand"><div class="logo-badge">HS+</div><div><div class="brand-title">HerShield AI+</div><div class="brand-tag">Made for women, By women</div></div></div>
+    <div class="nav-links">
+      <a href="home.html">Home</a>
+      <a href="homes.html" class="active">Homes</a>
+      <a href="drivers.html">Drivers</a>
+      <a href="shops.html">Shops</a>
+    </div>
+  </nav>
+
+  <main class="content">
+    <header class="topbar"><div class="left"><div class="greeting">Verified Homes</div><div class="small-note">Homes and short-stay hosts verified by the community</div></div><div class="actions"><button id="signOutBtn" class="btn ghost">Sign out</button></div></header>
+
+    <section class="card">
+      <h3>Verified Homes (Structured)</h3>
+      <table class="list-table" id="homesTable">
+        <thead><tr><th>ID</th><th>Name</th><th>Verified</th><th>Address</th><th>Contact</th><th>Notes</th><th>Actions</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+  </main>
+</div>
+
+<div id="modalRoot"></div>
+<script src="main.js"></script>
+<script>
+const SAMPLE_HOMES = [
+  { id:'H001', name:'Community Shelter Salem', verified:true, address:'12 Rose Street, Salem', contact:'+91 90000 10001', notes:'24/7 staff, women-only rooms' },
+  { id:'H002', name:'SafeStay Residency', verified:true, address:'45 Lakeview Ave, Salem', contact:'+91 90000 10002', notes:'Short-stay, CCTV, female host' },
+  { id:'H003', name:'Harbor Guest House', verified:true, address:'8 Market Road, Salem', contact:'+91 90000 10003', notes:'Verified by local volunteers' },
+  { id:'H004', name:'Lotus Women Hostel', verified:true, address:'22 Green Park, Salem', contact:'+91 90000 10004', notes:'Secure entry, emergency contact' },
+  { id:'H005', name:'Sunrise Short Stay', verified:true, address:'101 Hill Lane, Salem', contact:'+91 90000 10005', notes:'Near bus stop, friendly host' }
+];
+
+function renderHomes(){
+  const tbody = document.querySelector('#homesTable tbody');
+  tbody.innerHTML = '';
+  SAMPLE_HOMES.forEach(h=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${escapeHtml(h.id)}</td>
+      <td>${escapeHtml(h.name)}</td>
+      <td>${h.verified ? '✅' : '❌'}</td>
+      <td>${escapeHtml(h.address)}</td>
+      <td>${escapeHtml(h.contact)}</td>
+      <td>${escapeHtml(h.notes)}</td>
+      <td><button class="btn" data-id="${h.id}" data-action="view">View</button></td>`;
+    tbody.appendChild(tr);
+  });
+  document.querySelectorAll('[data-action="view"]').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      const id = e.target.getAttribute('data-id');
+      const h = SAMPLE_HOMES.find(x=>x.id===id);
+      if(!h) return;
+      showModal({ title: h.name, html:`<p><strong>Address</strong> ${escapeHtml(h.address)}</p><p><strong>Contact</strong> ${escapeHtml(h.contact)}</p><p><strong>Notes</strong> ${escapeHtml(h.notes)}</p><p><strong>Verified</strong> ${h.verified ? 'Yes' : 'No'}</p>`, primaryText:'OK' });
+    });
+  });
+}
+
+document.getElementById('signOutBtn').addEventListener('click', ()=> signOut());
+renderHomes();
+</script>
+</body>
+</html>

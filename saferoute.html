@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>HerShield AI+ — Safe Route</title>
+  <link rel="stylesheet" href="styles.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <style>
+    #map{height:420px;border-radius:8px;overflow:hidden}
+  </style>
+</head>
+<body>
+<div class="app">
+  <nav class="nav">
+    <div class="brand"><div class="logo-badge">HS+</div><div><div class="brand-title">HerShield AI+</div><div class="brand-tag">Made for women, By women</div></div></div>
+    <div class="nav-links"><a href="home.html">Home</a><a href="saferoute.html" class="active">Safe Route</a><a href="patrol.html">Patrol</a></div>
+  </nav>
+
+  <main class="content">
+    <header class="topbar"><div class="left"><div class="greeting">Safe Route Planner</div><div class="small">Enter Start and End as text (area names or lat,lng) or click the map</div></div><div class="actions"><button id="signOutBtn" class="btn ghost">Sign out</button></div></header>
+
+    <section class="card">
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <input id="startInput" class="input" placeholder="Start (area name or lat,lng)" />
+        <input id="endInput" class="input" placeholder="End (area name or lat,lng)" />
+        <button id="drawBtn" class="btn primary">Draw Routes</button>
+        <button id="clearBtn" class="btn">Clear</button>
+      </div>
+      <div id="map" class="map"></div>
+      <div style="margin-top:12px" id="routesSummary"></div>
+    </section>
+  </main>
+</div>
+
+<div id="modalRoot"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="main.js"></script>
+<script>
+const map = L.map('map').setView([13.0827,80.2707], 13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+let startMarker=null, endMarker=null, routeLayer=null;
+
+function parseLatLng(txt){
+  if(!txt) return null;
+  const p = txt.split(',').map(s=>s.trim());
+  if(p.length===2 && !isNaN(p[0]) && !isNaN(p[1])) return { lat:+p[0], lng:+p[1] };
+  return null;
+}
+
+map.on('click', function(e){
+  if(!startMarker){
+    startMarker = L.marker(e.latlng, { draggable:true }).addTo(map).bindPopup('Start').openPopup();
+    document.getElementById('startInput').value = `${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`;
+    startMarker.on('dragend', ()=> { const p = startMarker.getLatLng(); document.getElementById('startInput').value = `${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`; });
+  } else if(!endMarker){
+    endMarker = L.marker(e.latlng, { draggable:true }).addTo(map).bindPopup('End').openPopup();
+    document.getElementById('endInput').value = `${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`;
+    endMarker.on('dragend', ()=> { const p = endMarker.getLatLng(); document.getElementById('endInput').value = `${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`; });
+  } else {
+    startMarker.setLatLng(e.latlng);
+    document.getElementById('startInput').value = `${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`;
+  }
+});
+
+function computeMetrics(){
+  return {
+    score: Math.round(50 + Math.random()*50),
+    crime: (Math.random()*10).toFixed(1),
+    lighting: Math.round(20 + Math.random()*80),
+    crowd: Math.round(Math.random()*100)
+  };
+}
+
+async function resolvePlace(text){
+  const latlng = parseLatLng(text);
+  if(latlng) return latlng;
+  const geo = await geocodePlace(text);
+  if(geo) return { lat: geo.lat, lng: geo.lng, name: geo.display_name };
+  return null;
+}
+
+function drawRoutes(start, end){
+  if(routeLayer){ routeLayer.remove(); routeLayer = null; }
+  routeLayer = L.layerGroup().addTo(map);
+
+  // create three distinct midpoints to make visually different paths
+  const midA = { lat: (start.lat + end.lat)/2 + 0.006, lng: (start.lng + end.lng)/2 + 0.004 };
+  const midB = { lat: (start.lat + end.lat)/2 - 0.004, lng: (start.lng + end.lng)/2 + 0.006 };
+  const midC = { lat: (start.lat + end.lat)/2 + 0.002, lng: (start.lng + end.lng)/2 - 0.006 };
+
+  const routes = [
+    { name:'Fastest (Yellow)', coords:[ [start.lat,start.lng], [ (start.lat+end.lat)/2, (start.lng+end.lng)/2 ], [end.lat,end.lng ] ], color:'#fdd835' },
+    { name:'Balanced (Orange)', coords:[ [start.lat,start.lng], [midA.lat,midA.lng], [end.lat,end.lng] ], color:'#ff9800' },
+    { name:'Safest (Red)', coords:[ [start.lat,start.lng], [midB.lat,midB.lng], [end.lat,end.lng] ], color:'#d32f2f' }
+  ];
+
+  const summary = [];
+  routes.forEach((r,i)=>{
+    const m = computeMetrics();
+    const poly = L.polyline(r.coords, { color: r.color, weight:6, opacity:0.95 }).addTo(routeLayer);
+    poly.bindPopup(`<strong>${r.name}</strong><br>Safe Score: ${m.score}%<br>Crime rate: ${m.crime}%<br>Lighting: ${m.lighting}%<br>Crowd: ${m.crowd}%`);
+    summary.push({ name:r.name, metrics:m, color:r.color });
+  });
+
+  const group = L.featureGroup(routeLayer.getLayers());
+  map.fitBounds(group.getBounds().pad(0.4));
+  renderRoutesSummary(summary);
+}
+
+function renderRoutesSummary(list){
+  const el = document.getElementById('routesSummary');
+  el.innerHTML = '';
+  list.forEach(r=>{
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.display = 'flex';
+    card.style.justifyContent = 'space-between';
+    card.style.alignItems = 'center';
+    card.innerHTML = `<div><div style="font-weight:800">${escapeHtml(r.name)}</div>
+      <div class="small-note">Safe Score: ${r.metrics.score}% · Crime: ${r.metrics.crime}% · Lighting: ${r.metrics.lighting}% · Crowd: ${r.metrics.crowd}%</div></div>
+      <div style="width:14px;height:14px;border-radius:7px;background:${r.color}"></div>`;
+    el.appendChild(card);
+  });
+}
+
+document.getElementById('drawBtn').addEventListener('click', async ()=>{
+  const sText = document.getElementById('startInput').value.trim();
+  const eText = document.getElementById('endInput').value.trim();
+  const s = await resolvePlace(sText) || (startMarker && startMarker.getLatLng() ? { lat:startMarker.getLatLng().lat, lng:startMarker.getLatLng().lng } : null);
+  const e = await resolvePlace(eText) || (endMarker && endMarker.getLatLng() ? { lat:endMarker.getLatLng().lat, lng:endMarker.getLatLng().lng } : null);
+  if(!s || !e){ showModal({ title:'Missing points', html:'<p>Please set both Start and End by entering coordinates, area names, or clicking the map.</p>', primaryText:'OK' }); return; }
+  drawRoutes(s,e);
+});
+
+document.getElementById('clearBtn').addEventListener('click', ()=>{
+  if(startMarker){ map.removeLayer(startMarker); startMarker = null; document.getElementById('startInput').value = ''; }
+  if(endMarker){ map.removeLayer(endMarker); endMarker = null; document.getElementById('endInput').value = ''; }
+  if(routeLayer){ routeLayer.remove(); routeLayer = null; document.getElementById('routesSummary').innerHTML = ''; }
+});
+
+document.getElementById('signOutBtn').addEventListener('click', ()=> signOut());
+</script>
+</body>
+</html>

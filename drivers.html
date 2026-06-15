@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>HerShield AI+ — Recommended Drivers</title>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+<div class="app">
+  <nav class="nav">
+    <div class="brand"><div class="logo-badge">HS+</div><div><div class="brand-title">HerShield AI+</div><div class="brand-tag">Made for women, By women</div></div></div>
+    <div class="nav-links">
+      <a href="home.html">Home</a>
+      <a href="drivers.html" class="active">Drivers</a>
+      <a href="homes.html">Homes</a>
+      <a href="shops.html">Shops</a>
+    </div>
+  </nav>
+
+  <main class="content">
+    <header class="topbar"><div class="left"><div class="greeting">Recommended Drivers</div><div class="small-note">Drivers recommended based on female-friendly ratings</div></div><div class="actions"><button id="signOutBtn" class="btn ghost">Sign out</button></div></header>
+
+    <section class="card">
+      <h3>Drivers (Structured)</h3>
+      <table class="list-table" id="driversTable">
+        <thead><tr><th>ID</th><th>Name</th><th>Rating</th><th>Platform</th><th>Vehicle</th><th>Contact</th><th>Actions</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+  </main>
+</div>
+
+<div id="modalRoot"></div>
+<script src="main.js"></script>
+<script>
+const SAMPLE_DRIVERS = [
+  { id:'D001', name:'Suresh Kumar', rating:4.9, feedbackCount:124, femaleFriendly:true, platform:'Ola', vehicle:'Sedan (White)', contact:'+91 90000 20001', notes:'Experienced, punctual' },
+  { id:'D002', name:'Ravi Shankar', rating:4.8, feedbackCount:98, femaleFriendly:true, platform:'Uber', vehicle:'SUV (Black)', contact:'+91 90000 20002', notes:'Calm driver' },
+  { id:'D003', name:'Ajay Kumar', rating:4.7, feedbackCount:76, femaleFriendly:true, platform:'Rapido', vehicle:'Hatchback (Blue)', contact:'+91 90000 20003', notes:'Trusted by volunteers' }
+];
+
+function renderDrivers(){
+  const tbody = document.querySelector('#driversTable tbody');
+  tbody.innerHTML = '';
+  SAMPLE_DRIVERS.forEach(d=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${escapeHtml(d.id)}</td>
+      <td>${escapeHtml(d.name)}</td>
+      <td>${d.rating}★</td>
+      <td>${escapeHtml(d.platform)}</td>
+      <td>${escapeHtml(d.vehicle)}</td>
+      <td>${escapeHtml(d.contact)}</td>
+      <td><button class="btn" data-id="${d.id}" data-action="book">Book</button></td>`;
+    tbody.appendChild(tr);
+  });
+  document.querySelectorAll('[data-action="book"]').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      const id = e.target.getAttribute('data-id');
+      const d = SAMPLE_DRIVERS.find(x=>x.id===id);
+      if(!d) return;
+      showModal({ title:`Book ${escapeHtml(d.name)}`, html:`<p><strong>Contact</strong> ${escapeHtml(d.contact)}</p><p>${escapeHtml(d.platform)} • ${escapeHtml(d.vehicle)}</p>`, primaryText:'Copy Contact', primaryAction: ()=> navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(`${d.name} — ${d.contact}`) : alert('Contact: '+d.contact) });
+    });
+  });
+}
+
+document.getElementById('signOutBtn').addEventListener('click', ()=> signOut());
+renderDrivers();
+</script>
+</body>
+</html>

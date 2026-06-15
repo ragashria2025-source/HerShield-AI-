@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>HerShield AI+ — Register</title>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+<div style="max-width:900px;margin:18px auto;padding:12px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <div>
+      <div style="font-family:var(--title-font);font-weight:800;font-size:20px;color:#fff">HerShield AI+ — Registration</div>
+      <div style="color:var(--muted);margin-top:6px">Apply to become a Verified Volunteer, Home host, Shop or Driver</div>
+    </div>
+    <div>
+      <a href="home.html" class="btn ghost">Back</a>
+    </div>
+  </div>
+
+  <section class="card">
+    <h3>Choose registration type</h3>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button class="btn" id="regVolunteer">Volunteer</button>
+      <button class="btn" id="regHome">Home Host</button>
+      <button class="btn" id="regShop">Shop</button>
+      <button class="btn" id="regDriver">Driver</button>
+    </div>
+
+    <div id="regFormArea"></div>
+  </section>
+</div>
+
+<div id="modalRoot"></div>
+<script src="main.js"></script>
+<script>
+function renderForm(type){
+  const area = document.getElementById('regFormArea');
+  area.innerHTML = '';
+  const form = document.createElement('form');
+  form.className = 'register-grid';
+  form.innerHTML = `
+    <label class="field"><span class="label">Full name</span><input class="input" name="name" required></label>
+    <label class="field"><span class="label">Contact phone</span><input class="input" name="phone" required></label>
+    <label class="field"><span class="label">Email (optional)</span><input class="input" name="email"></label>
+    <label class="field"><span class="label">Location (area name or address)</span><input class="input" name="location" required></label>
+    <label class="field"><span class="label">Short description / why you want to register</span><textarea class="input" name="notes" rows="3"></textarea></label>
+    <div style="display:flex;gap:8px"><button class="btn primary" type="submit">Submit application</button><button class="btn" type="button" id="cancelReg">Cancel</button></div>
+    <div class="small-note">Your application is stored locally for demo purposes. Verification is simulated.</div>
+  `;
+  area.appendChild(form);
+
+  form.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const fd = new FormData(form);
+    const payload = {
+      name: fd.get('name'),
+      phone: fd.get('phone'),
+      email: fd.get('email'),
+      location: fd.get('location'),
+      notes: fd.get('notes'),
+    };
+    try {
+      const id = await saveRegistration({ type, payload });
+      showModal({ title:'Application submitted', html:`<p>Your application id: ${id}. We'll review it (demo).</p>`, primaryText:'OK', primaryAction: ()=> { area.innerHTML=''; } });
+    } catch(err){
+      showModal({ title:'Error', html:'<p>Unable to save application locally.</p>', primaryText:'OK' });
+    }
+  });
+
+  document.getElementById('cancelReg').addEventListener('click', ()=> area.innerHTML = '');
+}
+
+document.getElementById('regVolunteer').addEventListener('click', ()=> renderForm('volunteer'));
+document.getElementById('regHome').addEventListener('click', ()=> renderForm('home-host'));
+document.getElementById('regShop').addEventListener('click', ()=> renderForm('shop'));
+document.getElementById('regDriver').addEventListener('click', ()=> renderForm('driver'));
+</script>
+</body>
+</html>

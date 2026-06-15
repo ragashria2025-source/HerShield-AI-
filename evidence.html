@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>HerShield AI+ — Evidence Viewer</title>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+<div style="max-width:900px;margin:18px auto;padding:12px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <div>
+      <div style="font-family:var(--title-font);font-weight:800;font-size:20px;color:#fff">Evidence Viewer</div>
+      <div style="color:var(--muted);margin-top:6px">Play, download or delete saved SOS evidence (demo)</div>
+    </div>
+    <div>
+      <a href="home.html" class="btn ghost">Back</a>
+    </div>
+  </div>
+
+  <section class="card">
+    <div id="evidenceList"></div>
+  </section>
+</div>
+
+<div id="modalRoot"></div>
+<script src="main.js"></script>
+<script>
+const container = document.getElementById('evidenceList');
+renderEvidenceList(container);
+</script>
+</body>
+</html>

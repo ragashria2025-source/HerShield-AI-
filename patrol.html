@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>HerShield AI+ — Police Patrols</title>
+  <link rel="stylesheet" href="styles.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <style>#map{height:420px;border-radius:8px;overflow:hidden}</style>
+</head>
+<body>
+<div class="app">
+  <nav class="nav">
+    <div class="brand"><div class="logo-badge">HS+</div><div><div class="brand-title">HerShield AI+</div><div class="brand-tag">Made for women, By women</div></div></div>
+    <div class="nav-links">
+      <a href="home.html">Home</a>
+      <a href="patrol.html" class="active">Patrol</a>
+      <a href="saferoute.html">Safe Route</a>
+    </div>
+  </nav>
+
+  <main class="content">
+    <header class="topbar"><div class="left"><div class="greeting">Police Patrols</div><div class="small">Enter area or use your location to view patrol dots</div></div><div class="actions"><button id="signOutBtn" class="btn ghost">Sign out</button></div></header>
+
+    <section class="card">
+      <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px">
+        <input id="centerInput" class="input" placeholder="Enter area name or lat,lng" />
+        <button id="useMyLoc" class="btn">Use my location</button>
+        <button id="showPatrols" class="btn primary">Show Patrols</button>
+      </div>
+      <div id="map" class="map"></div>
+      <div style="margin-top:12px" class="small-note">Red dots represent patrol positions generated around the chosen location.</div>
+    </section>
+  </main>
+</div>
+
+<div id="modalRoot"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="main.js"></script>
+<script>
+const map = L.map('map').setView([13.0827,80.2707], 13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+let centerMarker=null;
+let patrolMarkers=[];
+
+function parseLatLng(txt){
+  if(!txt) return null;
+  const p = txt.split(',').map(s=>s.trim());
+  if(p.length===2 && !isNaN(p[0]) && !isNaN(p[1])) return { lat:+p[0], lng:+p[1] };
+  return null;
+}
+
+map.on('click', function(e){
+  setCenter(e.latlng.lat, e.latlng.lng);
+});
+
+function setCenter(lat,lng){
+  if(centerMarker) centerMarker.setLatLng([lat,lng]);
+  else centerMarker = L.marker([lat,lng], { draggable:true }).addTo(map).bindPopup('Center').openPopup();
+  document.getElementById('centerInput').value = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+}
+
+document.getElementById('useMyLoc').addEventListener('click', async ()=>{
+  const btn = document.getElementById('useMyLoc'); btn.disabled=true; btn.textContent='Locating...';
+  try {
+    const pos = await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:10000}));
+    setCenter(pos.coords.latitude, pos.coords.longitude);
+    map.setView([pos.coords.latitude, pos.coords.longitude], 14);
+  } catch(e){
+    showModal({ title:'Location', html:'<p>Unable to get location. Please allow location access or enter coordinates.</p>', primaryText:'OK' });
+  } finally { btn.disabled=false; btn.textContent='Use my location'; }
+});
+
+function generatePatrols(center, count=12, radiusKm=2){
+  const cLat = Number(center.lat), cLng = Number(center.lng);
+  const list=[];
+  for(let i=0;i<count;i++){
+    const angle = Math.random()*Math.PI*2;
+    const dist = Math.random()*radiusKm;
+    const dLat = (dist/111)*Math.cos(angle);
+    const dLng = (dist/(111*Math.cos(cLat*Math.PI/180)))*Math.sin(angle);
+    const lat = cLat + dLat;
+    const lng = cLng + dLng;
+    list.push({ id:'p-'+i+'-'+Date.now(), lat, lng, name:'Patrol '+(i+1), ts:Date.now() });
+  }
+  return list;
+}
+
+function showPatrolDots(list){
+  patrolMarkers.forEach(m=>map.removeLayer(m));
+  patrolMarkers=[];
+  list.forEach(p=>{
+    const m = L.circleMarker([p.lat,p.lng], { radius:7, color:'#b71c1c', weight:1.5, fillColor:'#ff1744', fillOpacity:0.95 }).addTo(map);
+    m.bindPopup(`<strong>${escapeHtml(p.name)}</strong><br/><span class="small-note">${new Date(p.ts).toLocaleString()}</span>`);
+    patrolMarkers.push(m);
+  });
+  if(list.length) map.setView([list[0].lat, list[0].lng], 13);
+}
+
+document.getElementById('showPatrols').addEventListener('click', async ()=>{
+  const txt = document.getElementById('centerInput').value.trim();
+  let parsed = parseLatLng(txt);
+  if(!parsed){
+    const geo = await geocodePlace(txt);
+    if(geo) parsed = { lat: geo.lat, lng: geo.lng };
+  }
+  if(parsed) setCenter(parsed.lat, parsed.lng);
+  if(!centerMarker){ showModal({ title:'No center', html:'<p>Please set a center by clicking the map, entering coordinates or an area name, or using your location.</p>', primaryText:'OK' }); return; }
+  const center = centerMarker.getLatLng();
+  const patrols = generatePatrols({ lat:center.lat, lng:center.lng }, 12, 2);
+  showPatrolDots(patrols);
+});
+
+document.getElementById('signOutBtn').addEventListener('click', ()=> signOut());
+</script>
+</body>
+</html>
